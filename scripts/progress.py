@@ -34,8 +34,23 @@ def month_limit(today: date) -> str:
     return f"{y:04d}-{m:02d}"
 
 
+def normalize_month(name: str) -> str | None:
+    """Accept Russian month-year names and existing ISO folder names."""
+    name = name.strip()
+    if re.fullmatch(r"20\d\d-(0[1-9]|1[0-2])", name):
+        return name
+    match = re.fullmatch(r"([А-Яа-яЁё]+)\s+(20\d\d)", name)
+    if match:
+        number = next((i for i, title in enumerate(MONTHS, 1)
+                       if title.casefold() == match.group(1).casefold()), None)
+        if number:
+            return f"{match.group(2)}-{number:02d}"
+    return None
+
+
 def eligible(month: str, today: date) -> bool:
-    return bool(re.fullmatch(r"20\d\d-(0[1-9]|1[0-2])", month)) and START <= month <= month_limit(today)
+    canonical = normalize_month(month)
+    return canonical is not None and START <= canonical <= month_limit(today)
 
 
 def disk_path(*parts: str) -> str:
@@ -165,15 +180,15 @@ def render(data: bytes, project: str, unit: str, month: str, for_site: bool) -> 
 def process_unit(disk, project, unit, today):
     base = disk_path(project["folder"], "Исходные фотографии", unit)
     for folder in sorted(disk.list(base) or [], key=lambda f: f["name"]):
-        month = folder["name"]
-        if folder["type"] != "dir" or not eligible(month, today):
+        month = normalize_month(folder["name"])
+        if folder["type"] != "dir" or month is None or not eligible(month, today):
             continue
         dest = archive_path(project, unit, month)
         manifest_path = dest + "/_manifest.json"
         if disk.stat(manifest_path):
             LOG.info("Already completed: %s / %s / %s", project["slug"], unit, month)
             continue
-        source = base + "/" + month
+        source = base + "/" + folder["name"]
         files = disk.list(source) or []
         if not any(f["name"] == "_READY.txt" and f["type"] == "file" for f in files):
             LOG.info("Waiting for _READY.txt: %s", source)
@@ -266,6 +281,10 @@ def run(disk, projects, today, output):
             if unit["type"] != "dir":
                 continue
             try:
+                # Create current month's folder even before the 27th.
+                this_month = f"{today.year:04d}-{today.month:02d}"
+                if this_month >= START:
+                    disk.mkdir(root + "/" + unit["name"] + "/" + label_month(this_month))
                 process_unit(disk, project, unit["name"], today)
             except Exception:
                 LOG.exception("Processing failed: %s / %s", project["slug"], unit["name"])
