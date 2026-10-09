@@ -18,7 +18,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 LOG = logging.getLogger("progress")
 API = "https://cloud-api.yandex.net/v1/disk/resources"
-ROOT = "app:/Ход строительства"
+ROOT = "app:/"  # Root of the OAuth application folder (already named Ход строительства)
 START = "2026-10"
 BASE_URL = "https://trestfam.github.io/construction-progress"
 MONTHS = ("Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
@@ -39,7 +39,7 @@ def eligible(month: str, today: date) -> bool:
 
 
 def disk_path(*parts: str) -> str:
-    return ROOT + ("/" + "/".join(parts) if parts else "")
+    return ROOT + "/".join(parts) if parts else ROOT
 
 
 def label_month(month: str) -> str:
