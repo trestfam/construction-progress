@@ -229,28 +229,60 @@ def process_unit(disk, project, unit, today):
                  project["slug"], unit, month, len(done))
 
 
+def completed_archives(disk, project):
+    """Find published months in either the new hierarchy or previous flat layout.
+
+    Prefer the new layout if both have a complete manifest. Empty directories
+    never become public gallery entries.
+    """
+    base = disk_path(project["folder"], "Готовые фотографии")
+    found = {}
+
+    def consider(folder, priority):
+        marker = folder + "/_manifest.json"
+        if not disk.stat(marker):
+            return
+        manifest = json.loads(disk.download(marker).decode("utf-8"))
+        if manifest.get("status") != "complete" or manifest.get("project") != project["slug"]:
+            return
+        unit, month = manifest["unit"], manifest["month"]
+        if normalize_month(month) != month:
+            raise ValueError("Invalid month in manifest: " + repr(month))
+        key = (unit, month)
+        old = found.get(key)
+        if old is None or priority > old[0]:
+            if old is not None:
+                LOG.warning("Duplicate complete manifest for %s/%s; prefer new layout",
+                            unit, month)
+            found[key] = (priority, folder, manifest)
+        elif old is not None:
+            LOG.warning("Duplicate complete manifest ignored: %s", folder)
+
+    for directory in sorted(disk.list(base) or [], key=lambda x: x["name"]):
+        if directory["type"] != "dir":
+            continue
+        parent = base + "/" + directory["name"]
+        # Flat layout: "Атмосфера. Литер 1. Октябрь 2026"
+        consider(parent, priority=0)
+        # New layout: "Литер 1/Октябрь 2026"
+        for month_folder in disk.list(parent) or []:
+            if month_folder["type"] == "dir" and normalize_month(month_folder["name"]):
+                consider(parent + "/" + month_folder["name"], priority=1)
+
+    return [entry[1:] for entry in found.values()]
+
+
 def export_site(disk, projects, output: Path):
     output.mkdir(parents=True, exist_ok=True)
     total = 0
     for project in projects:
         entries = []
-        base = disk_path(project["folder"], "Готовые фотографии")
-        for directory in disk.list(base) or []:
-            if directory["type"] != "dir":
-                continue
-            folder = base + "/" + directory["name"]
-            if not disk.stat(folder + "/_manifest.json"):
-                continue
-            manifest = json.loads(disk.download(folder + "/_manifest.json").decode("utf-8"))
-            if manifest.get("status") != "complete" or manifest.get("project") != project["slug"]:
-                continue
+        for folder, manifest in completed_archives(disk, project):
             month, unit = manifest["month"], manifest["unit"]
-            if not re.fullmatch(r"20\d\d-(0[1-9]|1[0-2])", month):
-                raise ValueError("Invalid month in manifest")
             photos = []
             for photo in manifest["photos"]:
                 name = photo["site_file"]
-                if not re.fullmatch(r"[0-9a-f]{20}-site\.jpg", name):
+                if not re.fullmatch(r"[0-9a-f]{20}-site\\.jpg", name):
                     raise ValueError("Invalid output filename")
                 rel = f'images/{project["slug"]}/{short_hash(unit)}/{month}/{name}'
                 data = disk.download(folder + "/" + name)
