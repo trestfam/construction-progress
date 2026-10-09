@@ -284,7 +284,10 @@ def run(disk, projects, today, output):
                 # Create current month's folder even before the 27th.
                 this_month = f"{today.year:04d}-{today.month:02d}"
                 if this_month >= START:
+                    # Keep the month folder in both source and finished-photo trees.
+                    # An empty destination is NOT a completed month; only _manifest.json is.
                     disk.mkdir(root + "/" + unit["name"] + "/" + label_month(this_month))
+                    disk.mkdir(archive_path(project, unit["name"], this_month))
                 process_unit(disk, project, unit["name"], today)
             except Exception:
                 LOG.exception("Processing failed: %s / %s", project["slug"], unit["name"])
