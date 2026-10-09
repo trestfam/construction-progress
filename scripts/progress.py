@@ -66,6 +66,12 @@ def short_hash(value: str) -> str:
 
 
 def archive_path(project: dict, unit: str, month: str) -> str:
+    """Keep prepared photos in the same unit/month hierarchy as originals."""
+    return disk_path(project["folder"], "Готовые фотографии", unit, label_month(month))
+
+
+def legacy_archive_path(project: dict, unit: str, month: str) -> str:
+    """Historical flat folder created by previous workflow versions."""
     return disk_path(project["folder"], "Готовые фотографии",
                      f'{project["folder"]}. {unit}. {label_month(month)}')
 
@@ -185,7 +191,8 @@ def process_unit(disk, project, unit, today):
             continue
         dest = archive_path(project, unit, month)
         manifest_path = dest + "/_manifest.json"
-        if disk.stat(manifest_path):
+        old_manifest_path = legacy_archive_path(project, unit, month) + "/_manifest.json"
+        if disk.stat(manifest_path) or disk.stat(old_manifest_path):
             LOG.info("Already completed: %s / %s / %s", project["slug"], unit, month)
             continue
         source = base + "/" + folder["name"]
@@ -198,7 +205,7 @@ def process_unit(disk, project, unit, today):
         if not photos:
             LOG.warning("Ready folder without photos: %s", source)
             continue
-        disk.mkdir(disk_path(project["folder"], "Готовые фотографии"))
+        disk.mkdir(disk_path(project["folder"], "Готовые фотографии", unit))
         disk.mkdir(dest)
         done = []
         for photo in photos:
@@ -287,6 +294,7 @@ def run(disk, projects, today, output):
                     # Keep the month folder in both source and finished-photo trees.
                     # An empty destination is NOT a completed month; only _manifest.json is.
                     disk.mkdir(root + "/" + unit["name"] + "/" + label_month(this_month))
+                    disk.mkdir(disk_path(project["folder"], "Готовые фотографии", unit["name"]))
                     disk.mkdir(archive_path(project, unit["name"], this_month))
                 process_unit(disk, project, unit["name"], today)
             except Exception:
