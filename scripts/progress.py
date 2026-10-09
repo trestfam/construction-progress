@@ -282,7 +282,7 @@ def export_site(disk, projects, output: Path):
             photos = []
             for photo in manifest["photos"]:
                 name = photo["site_file"]
-                if not re.fullmatch(r"[0-9a-f]{20}-site\\.jpg", name):
+                if not re.fullmatch(r"[0-9a-f]{20}-site\.jpg", name):
                     raise ValueError("Invalid output filename")
                 rel = f'images/{project["slug"]}/{short_hash(unit)}/{month}/{name}'
                 data = disk.download(folder + "/" + name)
