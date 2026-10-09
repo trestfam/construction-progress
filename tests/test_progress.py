@@ -1,6 +1,6 @@
 import unittest
 from datetime import date
-from scripts.progress import eligible, month_limit, label_month, disk_path
+from scripts.progress import eligible, month_limit, label_month, disk_path, normalize_month
 
 class ProgressTests(unittest.TestCase):
     def test_start_day(self):
@@ -17,6 +17,11 @@ class ProgressTests(unittest.TestCase):
         self.assertEqual(label_month('2026-10'), 'Октябрь 2026')
         self.assertEqual(disk_path('Атмосфера'), 'app:/Атмосфера')
         self.assertEqual(disk_path(), 'app:/')
+        self.assertEqual(normalize_month('Октябрь 2026'), '2026-10')
+        self.assertEqual(normalize_month('2026-10'), '2026-10')
+        self.assertIsNone(normalize_month('Неизвестный 2026'))
+        self.assertTrue(eligible('Октябрь 2026', date(2026, 10, 27)))
+        self.assertFalse(eligible('Октябрь 2026', date(2026, 10, 26)))
 
 if __name__ == '__main__':
     unittest.main()
