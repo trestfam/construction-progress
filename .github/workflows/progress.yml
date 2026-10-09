@@ -1,5 +1,13 @@
 name: Construction photo progress
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/progress.yml'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'config/**'
+      - 'requirements.txt'
   schedule:
     - cron: '17 5 * * *' # Daily around 10:17 in Ufa (UTC+5); GitHub may delay
   workflow_dispatch:
