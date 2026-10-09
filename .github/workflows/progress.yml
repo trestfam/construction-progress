@@ -42,6 +42,9 @@ jobs:
         env:
           YANDEX_DISK_TOKEN: ${{ secrets.YANDEX_DISK_TOKEN }}
         run: python scripts/progress.py
+      - name: Inspect historical photos from old developer website
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: python scripts/legacy_site_inspect.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
