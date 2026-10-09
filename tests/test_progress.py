@@ -15,7 +15,8 @@ class ProgressTests(unittest.TestCase):
 
     def test_format(self):
         self.assertEqual(label_month('2026-10'), 'Октябрь 2026')
-        self.assertEqual(disk_path('Атмосфера'), 'app:/Ход строительства/Атмосфера')
+        self.assertEqual(disk_path('Атмосфера'), 'app:/Атмосфера')
+        self.assertEqual(disk_path(), 'app:/')
 
 if __name__ == '__main__':
     unittest.main()
