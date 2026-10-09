@@ -11,7 +11,7 @@ class ProgressTests(unittest.TestCase):
     def test_month_eligibility(self):
         self.assertTrue(eligible('2026-10', date(2026, 11, 1)))
         self.assertFalse(eligible('2026-11', date(2026, 11, 1)))
-        self.assertTrue(eligible('2026-09', date(2026, 10, 31)))
+        self.assertFalse(eligible('2026-09', date(2026, 10, 31)))
 
     def test_format(self):
         self.assertEqual(label_month('2026-10'), 'Октябрь 2026')
